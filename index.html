@@ -1,73 +1,96 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meteo Ozzano</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 1rem;
-            background: #f0f0f0;
-            color: #333;
-        }
-        .section {
-            background: white;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            border-radius: 8px;
-            box-shadow: 0 0 5px rgba(0,0,0,0.1);
-        }
-        h1 {
-            text-align: center;
-            color: #0066cc;
-        }
-        .button {
-            display: block;
-            width: 100%;
-            padding: 0.75rem;
-            background: #007bff;
-            color: white;
-            text-align: center;
-            text-decoration: none;
-            border-radius: 5px;
-            margin-top: 1rem;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meteo Ozzano</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 1rem;
+      margin: 0;
+      background: #f0f0f0;
+      color: #000;
+      transition: background 0.3s, color 0.3s;
+    }
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: #121212;
+        color: #e0e0e0;
+      }
+    }
+    h1 { text-align: center; color: #007bff; }
+    select, .section {
+      width: 100%%;
+      margin: 1rem 0;
+      padding: 1rem;
+      border-radius: 6px;
+      border: none;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    .section { background: #fff; }
+    @media (prefers-color-scheme: dark) {
+      .section { background: #1e1e1e; }
+    }
+  </style>
 </head>
 <body>
-    <h1>📍 Meteo Ozzano dell'Emilia</h1>
+  <h1>📍 Meteo Live</h1>
+  <select id="citySelect">
+    <option value="Ozzano dell'Emilia">Ozzano dell'Emilia</option>
+    <option value="Bologna">Bologna</option>
+    <option value="Medicina">Medicina</option>
+    <option value="Misano Adriatico">Misano Adriatico</option>
+    <option value="Cesenatico">Cesenatico</option>
+  </select>
 
-    <div class="section">
-        <h2>🔔 Allerte Meteo</h2>
-        <p>✅ Nessuna allerta attiva</p>
-    </div>
+  <div id="weather" class="section">Caricamento dati meteo...</div>
+  <div id="forecast" class="section">Caricamento previsioni...</div>
 
-    <div class="section">
-        <h2>🌀 Radar ARPAE</h2>
-        <p>Celle temporalesche deboli da nord-ovest.</p>
-        <a href="https://www.arpae.it/radar" target="_blank" class="button">Apri radar live</a>
-    </div>
+  <script>
+    const apiKey = "44a70496ae66efda92fb996a34a0da93";
+    const citySelect = document.getElementById("citySelect");
+    const weatherDiv = document.getElementById("weather");
+    const forecastDiv = document.getElementById("forecast");
 
-    <div class="section">
-        <h2>🌩️ Rischio Grandine</h2>
-        <p>Moderato nel pomeriggio secondo Meteoblue.</p>
-    </div>
+    const loadWeather = async (city) => {
+      try {
+        const geo = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=${apiKey}`);
+        const geoData = await geo.json();
+        const { lat, lon } = geoData[0];
 
-    <div class="section">
-        <h2>📆 Previsioni prossime ore</h2>
-        <ul>
-            <li>☀️ 14:00 - Soleggiato</li>
-            <li>⛅ 17:00 - Nuvoloso</li>
-            <li>🌧️ 20:00 - Pioggia leggera</li>
-        </ul>
-    </div>
+        const weather = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=it`);
+        const wData = await weather.json();
 
-    <script>
-        // Aggiornamento automatico ogni 5 minuti
-        setTimeout(() => {
-            location.reload();
-        }, 5 * 60 * 1000);
-    </script>
+        const forecast = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=it`);
+        const fData = await forecast.json();
+
+        weatherDiv.innerHTML = `
+          <h2>☁️ Meteo attuale a ${city}</h2>
+          <p><strong>${wData.weather[0].description}</strong></p>
+          <p>🌡️ ${wData.main.temp} °C (min: ${wData.main.temp_min}°C, max: ${wData.main.temp_max}°C)</p>
+          <p>💧 Umidità: ${wData.main.humidity}% | 💨 Vento: ${wData.wind.speed} m/s</p>
+        `;
+
+        forecastDiv.innerHTML = "<h2>📅 Prossime ore</h2>";
+        for (let i = 0; i < 5; i++) {
+          const fc = fData.list[i];
+          forecastDiv.innerHTML += `
+            <p><strong>${fc.dt_txt.slice(11, 16)}</strong> - ${fc.weather[0].description}, 🌡️ ${fc.main.temp}°C</p>
+          `;
+        }
+      } catch (err) {
+        weatherDiv.innerHTML = "Errore nel caricamento dati meteo.";
+        forecastDiv.innerHTML = "";
+      }
+    };
+
+    citySelect.addEventListener("change", (e) => {
+      loadWeather(e.target.value);
+    });
+
+    // Caricamento iniziale
+    loadWeather(citySelect.value);
+  </script>
 </body>
 </html>
