@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meteo Ozzano</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 1rem;
+            background: #f0f0f0;
+            color: #333;
+        }
+        .section {
+            background: white;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #0066cc;
+        }
+        .button {
+            display: block;
+            width: 100%;
+            padding: 0.75rem;
+            background: #007bff;
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>📍 Meteo Ozzano dell'Emilia</h1>
+
+    <div class="section">
+        <h2>🔔 Allerte Meteo</h2>
+        <p>✅ Nessuna allerta attiva</p>
+    </div>
+
+    <div class="section">
+        <h2>🌀 Radar ARPAE</h2>
+        <p>Celle temporalesche deboli da nord-ovest.</p>
+        <a href="https://www.arpae.it/radar" target="_blank" class="button">Apri radar live</a>
+    </div>
+
+    <div class="section">
+        <h2>🌩️ Rischio Grandine</h2>
+        <p>Moderato nel pomeriggio secondo Meteoblue.</p>
+    </div>
+
+    <div class="section">
+        <h2>📆 Previsioni prossime ore</h2>
+        <ul>
+            <li>☀️ 14:00 - Soleggiato</li>
+            <li>⛅ 17:00 - Nuvoloso</li>
+            <li>🌧️ 20:00 - Pioggia leggera</li>
+        </ul>
+    </div>
+
+    <script>
+        // Aggiornamento automatico ogni 5 minuti
+        setTimeout(() => {
+            location.reload();
+        }, 5 * 60 * 1000);
+    </script>
+</body>
+</html>
