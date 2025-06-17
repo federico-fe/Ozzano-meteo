@@ -4,54 +4,77 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Meteo Ozzano</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
+    :root {
+      --primary: #2196f3;
+      --bg-light: #f9f9f9;
+      --bg-dark: #1e1e1e;
+      --card-light: #ffffff;
+      --card-dark: #2a2a2a;
+      --text-light: #333;
+      --text-dark: #eee;
+    }
     body {
-      font-family: sans-serif;
-      padding: 1rem;
+      font-family: 'Inter', sans-serif;
       margin: 0;
-      background: #f0f0f0;
-      color: #000;
+      padding: 1rem;
+      background: var(--bg-light);
+      color: var(--text-light);
     }
     @media (prefers-color-scheme: dark) {
       body {
-        background: #121212;
-        color: #e0e0e0;
+        background: var(--bg-dark);
+        color: var(--text-dark);
+      }
+      .card {
+        background: var(--card-dark);
       }
     }
-    h1 { text-align: center; color: #007bff; }
-    select, .section, button, input {
-      width: 100%%;
-      margin: 1rem 0;
-      padding: 1rem;
-      border-radius: 6px;
-      border: none;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    }
-    .section { background: #fff; }
-    @media (prefers-color-scheme: dark) {
-      .section { background: #1e1e1e; }
-    }
-    a.button {
-      display: block;
+    h1 {
       text-align: center;
-      margin: 1rem auto;
-      padding: 0.75rem;
-      background: #007bff;
-      color: white;
-      text-decoration: none;
-      border-radius: 5px;
+      font-size: 1.8rem;
+      color: var(--primary);
     }
-    #admin-panel {
-      display: none;
-      margin-top: 2rem;
+    select, button, input {
+      width: 100%%;
+      padding: 0.75rem;
+      margin: 0.5rem 0;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+    .card {
+      background: var(--card-light);
+      border-radius: 12px;
       padding: 1rem;
-      border: 2px dashed #007bff;
+      margin: 1rem 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .section-title {
+      font-weight: 600;
+      font-size: 1.2rem;
+      margin-bottom: 0.5rem;
+    }
+    .button {
+      background: var(--primary);
+      color: white;
+      text-align: center;
+      padding: 0.75rem;
+      border-radius: 10px;
+      text-decoration: none;
+      display: block;
     }
     canvas {
       max-width: 100%%;
-      margin: 1rem auto;
-      display: block;
+      margin-top: 1rem;
+    }
+    #admin-panel {
+      display: none;
+      border: 2px dashed var(--primary);
+      padding: 1rem;
+      margin-top: 1.5rem;
     }
   </style>
 </head>
@@ -60,30 +83,24 @@
   <select id="citySelect"></select>
   <button onclick="refreshWeather()">🔄 Aggiorna ora</button>
 
-  <div id="weather" class="section">Caricamento dati meteo...</div>
-  <div id="forecast" class="section">Caricamento previsioni...</div>
-  <div class="section"><canvas id="weatherChart"></canvas></div>
+  <div id="weather" class="card"></div>
+  <div id="forecast" class="card"></div>
+  <div class="card"><canvas id="weatherChart"></canvas></div>
 
-  <div class="section">
-    <h2>🌩️ Rischio Grandine</h2>
+  <div class="card">
+    <div class="section-title">🌩️ Rischio Grandine</div>
     <a class="button" href="https://www.meteoblue.com/it/tempo/outdoorsports/ozzano-dell-emilia_italia_3172891" target="_blank">🔗 Vai a Meteoblue</a>
   </div>
 
-  <div class="section">
-    <h2>🔔 Allerte Meteo ER</h2>
-    <a class="button" href="https://allertameteo.regione.emilia-romagna.it" target="_blank">🌐 Vai al sito AllertaMeteo ER</a>
+  <div class="card">
+    <div class="section-title">🔔 Allerte Meteo ER</div>
+    <a class="button" href="https://allertameteo.regione.emilia-romagna.it" target="_blank">🌐 Vai al sito ufficiale</a>
   </div>
 
-  <div class="section">
-    <h2>🌀 Radar Pioggia ARPAE</h2>
-    <a class="button" href="https://www.arpae.it/sim/?id=radar_stimapioggia" target="_blank">📡 Vai al Radar</a>
-  </div>
-
-  <div id="admin-panel" class="section">
-    <h2>🔧 Pannello Admin</h2>
-    <p>Aggiungi una nuova città:</p>
+  <div id="admin-panel" class="card">
+    <div class="section-title">🛠️ Aggiungi nuova città</div>
     <input type="text" id="newCity" placeholder="Es. Milano" />
-    <button onclick="addCity()">Aggiungi</button>
+    <button onclick="addCity()">➕ Aggiungi</button>
   </div>
 
   <script>
@@ -155,16 +172,15 @@
         const fData = await forecast.json();
 
         weatherDiv.innerHTML = `
-          <h2>☁️ Meteo attuale a ${city}</h2>
+          <div class="section-title">☀️ Meteo attuale a ${city}</div>
           <p><strong>${wData.weather[0].description}</strong></p>
-          <p>🌡️ ${wData.main.temp} °C (min: ${wData.main.temp_min}°C, max: ${wData.main.temp_max}°C)</p>
-          <p>💧 Umidità: ${wData.main.humidity}% | 💨 Vento: ${wData.wind.speed} m/s</p>
+          <p>🌡️ Temp: ${wData.main.temp} °C (min: ${wData.main.temp_min}°C, max: ${wData.main.temp_max}°C)</p>
+          <p>💧 Umidità: ${wData.main.humidity}%</p>
+          <p>💨 Vento: ${wData.wind.speed} m/s</p>
         `;
 
-        forecastDiv.innerHTML = "<h2>📅 Prossime ore</h2>";
-        const labels = [];
-        const temps = [];
-        const hums = [];
+        forecastDiv.innerHTML = "<div class='section-title'>📅 Previsioni prossime ore</div>";
+        const labels = [], temps = [], hums = [];
 
         for (let i = 0; i < 8; i++) {
           const fc = fData.list[i];
@@ -172,7 +188,7 @@
           labels.push(time);
           temps.push(fc.main.temp);
           hums.push(fc.main.humidity);
-          forecastDiv.innerHTML += `<p><strong>${time}</strong> - ${fc.weather[0].description}, 🌡️ ${fc.main.temp}°C</p>`;
+          forecastDiv.innerHTML += `<p><strong>${time}</strong> - ${fc.weather[0].description}, 🌡️ ${fc.main.temp}°C, 💨 ${fc.wind.speed} m/s</p>`;
         }
 
         if (chart) chart.destroy();
@@ -181,8 +197,8 @@
           data: {
             labels,
             datasets: [
-              { label: 'Temperatura (°C)', data: temps, borderColor: 'red', fill: false },
-              { label: 'Umidità (%)', data: hums, borderColor: 'blue', fill: false }
+              { label: 'Temperatura (°C)', data: temps, borderColor: '#ff5722', fill: false },
+              { label: 'Umidità (%)', data: hums, borderColor: '#03a9f4', fill: false }
             ]
           },
           options: { responsive: true, plugins: { legend: { position: 'top' } } }
@@ -194,7 +210,6 @@
     };
 
     citySelect.addEventListener("change", (e) => loadWeather(e.target.value));
-
     loadCities();
     loadWeather(citySelect.value);
   </script>
