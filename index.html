@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meteo Ozzano</title>
+  <link rel="icon" type="image/png" href="icon.png">
+  <link rel="apple-touch-icon" href="icon.png" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --primary: #2196f3;
+      --bg-light: #ffffff;
+      --bg-dark: #121212;
+      --card-light: #f5f5f5;
+      --card-dark: #1e1e1e;
+      --text-light: #111;
+      --text-dark: #f0f0f0;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 1rem;
+      background: var(--bg-light);
+      color: var(--text-light);
+    }
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: var(--bg-dark);
+        color: var(--text-dark);
+      }
+      .card {
+        background: var(--card-dark);
+      }
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.8rem;
+      color: var(--primary);
+    }
+    select, button, input {
+      width: 100%%;
+      padding: 0.75rem;
+      margin: 0.5rem 0;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+      background: #fff;
+      color: #000;
+    }
+    .card {
+      background: var(--card-light);
+      border-radius: 12px;
+      padding: 1rem;
+      margin: 1rem 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .section-title {
+      font-weight: 600;
+      font-size: 1.2rem;
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+    }
+    .button {
+      background: var(--primary);
+      color: white;
+      text-align: center;
+      padding: 0.75rem;
+      border-radius: 10px;
+      text-decoration: none;
+      display: block;
+    }
+    canvas {
+      max-width: 100%%;
+      margin-top: 1rem;
+    }
+    #admin-panel {
+      display: none;
+      border: 2px dashed var(--primary);
+      padding: 1rem;
+      margin-top: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>📍 Meteo Live</h1>
+  <select id="citySelect"></select>
+  <button onclick="refreshWeather()">🔄 Aggiorna ora</button>
+
+  <div id="weather" class="card"></div>
+  <div id="forecast" class="card"></div>
+  <div class="card"><canvas id="weatherChart"></canvas></div>
+
+  <div class="card">
+    <div class="section-title">🌩️ Rischio Grandine</div>
+    <a class="button" href="https://www.meteoblue.com/it/tempo/outdoorsports/ozzano-dell-emilia_italia_3172891" target="_blank">🔗 Vai a Meteoblue</a>
+  </div>
+
+  
+<div class="card">
+  <div class="section-title">🏛️ Storia del nome</div>
+  <p><strong>Claterna</strong>: antico centro romano fondato nel II secolo a.C., oggi corrispondente all’area di Maggio.</p>
+  <p><strong>Ozzano</strong>: nome in uso per secoli fino all’Ottocento.</p>
+  <p><strong>Ozzano di Sopra / Ozzano di Sotto</strong>: denominazioni usate durante l’epoca napoleonica (1805–1810).</p>
+  <p><strong>Ozzano dell’Emilia</strong>: nome ufficiale dal 1862 con Regio Decreto, per distinguere il comune da altri omonimi.</p>
+</div>
+
+<div class="card">
+    <div class="section-title">🔔 Allerte Meteo ER</div>
+    <a class="button" href="https://allertameteo.regione.emilia-romagna.it" target="_blank">🌐 Vai al sito ufficiale</a>
+  </div>
+
+  <div id="admin-panel" class="card">
+    <div class="section-title">🛠️ Aggiungi nuova città</div>
+    <input type="text" id="newCity" placeholder="Es. Milano" />
+    <button onclick="addCity()">➕ Aggiungi</button>
+  </div>
+
+  <script>
+    const apiKey = "44a70496ae66efda92fb996a34a0da93";
+    const citySelect = document.getElementById("citySelect");
+    const weatherDiv = document.getElementById("weather");
+    const forecastDiv = document.getElementById("forecast");
+    const ctx = document.getElementById("weatherChart").getContext("2d");
+    const adminPanel = document.getElementById("admin-panel");
+
+    let chart;
+
+    const defaultCities = [
+      "Ozzano dell'Emilia",
+      "Bologna",
+      "Medicina",
+      "Misano Adriatico",
+      "Cesenatico"
+    ];
+
+    const loadCities = () => {
+      const saved = JSON.parse(localStorage.getItem("cities")) || defaultCities;
+      citySelect.innerHTML = "";
+      saved.forEach(city => {
+        const option = document.createElement("option");
+        option.text = city;
+        option.value = city;
+        citySelect.add(option);
+      });
+    };
+
+    const saveCity = (newCity) => {
+      let cities = JSON.parse(localStorage.getItem("cities")) || defaultCities;
+      if (!cities.includes(newCity)) {
+        cities.push(newCity);
+        localStorage.setItem("cities", JSON.stringify(cities));
+      }
+    };
+
+    function addCity() {
+      const newCity = document.getElementById("newCity").value.trim();
+      if (newCity) {
+        saveCity(newCity);
+        loadCities();
+        citySelect.value = newCity;
+        loadWeather(newCity);
+      }
+    }
+
+    function refreshWeather() {
+      loadWeather(citySelect.value);
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("admin") === "1") {
+      adminPanel.style.display = "block";
+    }
+
+    const loadWeather = async (city) => {
+      try {
+        const geo = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=${apiKey}`);
+        const geoData = await geo.json();
+        const { lat, lon } = geoData[0];
+
+        const weather = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=it`);
+        const wData = await weather.json();
+
+        const forecast = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=it`);
+        const fData = await forecast.json();
+
+        weatherDiv.innerHTML = `
+          <div class="section-title">☀️ Meteo attuale a ${city}</div>
+          <p><strong>${wData.weather[0].description}</strong></p>
+          <p>🌡️ Temp: ${wData.main.temp} °C (min: ${wData.main.temp_min}°C, max: ${wData.main.temp_max}°C)</p>
+          <p>💧 Umidità: ${wData.main.humidity}%</p>
+          <p>💨 Vento: ${wData.wind.speed} m/s</p>
+        `;
+
+        forecastDiv.innerHTML = "<div class='section-title'>📅 Previsioni prossime ore</div>";
+        const labels = [], temps = [], hums = [];
+
+        for (let i = 0; i < 8; i++) {
+          const fc = fData.list[i];
+          const time = fc.dt_txt.slice(11, 16);
+          labels.push(time);
+          temps.push(fc.main.temp);
+          hums.push(fc.main.humidity);
+          forecastDiv.innerHTML += `<p><strong>${time}</strong> - ${fc.weather[0].description}, 🌡️ ${fc.main.temp}°C, 💨 ${fc.wind.speed} m/s</p>`;
+        }
+
+        if (chart) chart.destroy();
+        chart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              { label: 'Temperatura (°C)', data: temps, borderColor: '#ff5722', fill: false },
+              { label: 'Umidità (%)', data: hums, borderColor: '#03a9f4', fill: false }
+            ]
+          },
+          options: { responsive: true, plugins: { legend: { position: 'top' } } }
+        });
+      } catch {
+        weatherDiv.innerHTML = "Errore nel caricamento dati meteo.";
+        forecastDiv.innerHTML = "";
+      }
+    };
+
+    citySelect.addEventListener("change", (e) => loadWeather(e.target.value));
+    loadCities();
+    loadWeather(citySelect.value);
+  </script>
+</body>
+</html>
