@@ -11,7 +11,6 @@
       margin: 0;
       background: #f0f0f0;
       color: #000;
-      transition: background 0.3s, color 0.3s;
     }
     @media (prefers-color-scheme: dark) {
       body {
@@ -32,6 +31,22 @@
     @media (prefers-color-scheme: dark) {
       .section { background: #1e1e1e; }
     }
+    iframe {
+      width: 100%%;
+      height: 400px;
+      border: none;
+      margin-top: 1rem;
+    }
+    a.button {
+      display: block;
+      text-align: center;
+      margin: 1rem auto;
+      padding: 0.75rem;
+      background: #007bff;
+      color: white;
+      text-decoration: none;
+      border-radius: 5px;
+    }
   </style>
 </head>
 <body>
@@ -46,6 +61,22 @@
 
   <div id="weather" class="section">Caricamento dati meteo...</div>
   <div id="forecast" class="section">Caricamento previsioni...</div>
+
+  <div class="section">
+    <h2>🌩️ Rischio Grandine</h2>
+    <p>Dati stimati da Meteoblue (link esterno):</p>
+    <a class="button" href="https://www.meteoblue.com/it/tempo/outdoorsports/ozzano-dell-emilia_italia_3172891" target="_blank">🔗 Vai a Meteoblue</a>
+  </div>
+
+  <div class="section">
+    <h2>🔔 Allerte Meteo ER</h2>
+    <iframe src="https://allertameteo.regione.emilia-romagna.it" title="Allerta Meteo Emilia-Romagna"></iframe>
+  </div>
+
+  <div class="section">
+    <h2>🌀 Radar ARPAE</h2>
+    <a class="button" href="https://www.arpae.it/radar" target="_blank">📡 Apri radar in tempo reale</a>
+  </div>
 
   <script>
     const apiKey = "44a70496ae66efda92fb996a34a0da93";
@@ -89,7 +120,6 @@
       loadWeather(e.target.value);
     });
 
-    // Caricamento iniziale
     loadWeather(citySelect.value);
   </script>
 </body>
