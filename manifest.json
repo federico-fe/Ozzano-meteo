@@ -3,13 +3,14 @@
   "short_name": "OzzanoMeteo",
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#2196f3",
-  "theme_color": "#2196f3",
+  "background_color": "#EFE7D6",
+  "theme_color": "#b71c1c",
   "icons": [
     {
       "src": "icon.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "maskable any"
     }
   ]
 }
