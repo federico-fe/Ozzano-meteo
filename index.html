@@ -1,0 +1,134 @@
+
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meteo Ozzano</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon.png">
+  <link rel="apple-touch-icon" href="icon.png">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --primary: #8b0000;
+      --bg-light: #ffffff;
+      --bg-dark: #121212;
+      --card-light: #f5f5f5;
+      --card-dark: #1e1e1e;
+      --text-light: #8b0000;
+      --text-dark: #ffdddd;
+    }
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 1rem;
+      background: var(--bg-light);
+      color: var(--text-light);
+    }
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: var(--bg-dark);
+        color: var(--text-dark);
+      }
+    }
+    h1 {
+      text-align: center;
+      color: var(--primary);
+    }
+    .card {
+      background: var(--card-light);
+      border-radius: 12px;
+      padding: 1rem;
+      margin: 1rem 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .section-title {
+      font-weight: bold;
+      font-size: 1.2rem;
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+    }
+    button, input {
+      width: 100%;
+      padding: 0.75rem;
+      margin: 0.5rem 0;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+    canvas {
+      max-width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <h1>📍 Meteo Ozzano</h1>
+  <input type="text" id="searchCity" placeholder="Cerca città..." />
+  <button onclick="refreshWeather()">🔄 Aggiorna ora</button>
+  <div id="weather" class="card"></div>
+  <div id="forecast" class="card"></div>
+  <div id="alerts" class="card"></div>
+  <div id="sunTimes" class="card"></div>
+  <div class="card">
+    <div class="section-title">☁️ Meteoblue Satellite</div>
+    <iframe src="https://www.meteoblue.com/en/weather/maps/widget/ozzano-dell-emilia_italy_3172891?windAnimation=1" width="100%" height="300" frameborder="0" scrolling="no"></iframe>
+  </div>
+  <canvas id="weatherChart"></canvas>
+  <script>
+    const apiKey = "44a70496ae66efda92fb996a34a0da93";
+    let chart;
+    async function refreshWeather() {
+      const input = document.getElementById("searchCity").value;
+      if (!input) {
+        navigator.geolocation.getCurrentPosition(async (position) => {
+          await loadWeather(position.coords.latitude, position.coords.longitude);
+        });
+      } else {
+        const geo = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${input}&limit=1&appid=${apiKey}`);
+        const data = await geo.json();
+        await loadWeather(data[0].lat, data[0].lon);
+      }
+    }
+    async function loadWeather(lat, lon) {
+      const res = await fetch(`https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&units=metric&lang=it&appid=${apiKey}`);
+      const data = await res.json();
+      document.getElementById("weather").innerHTML = `<div class="section-title">☀️ Meteo attuale</div>
+        <p>${data.current.weather[0].description}</p>
+        <p>🌡️ Temp: ${data.current.temp} °C</p>
+        <p>💧 Umidità: ${data.current.humidity}%</p>
+        <p>💨 Vento: ${data.current.wind_speed} m/s</p>`;
+      const days = data.daily.slice(0, 7);
+      document.getElementById("forecast").innerHTML = "<div class='section-title'>📆 Previsioni 7 giorni</div>" +
+        days.map(day => {
+          const d = new Date(day.dt * 1000);
+          return `<p><strong>${d.toLocaleDateString('it-IT')}</strong>: ${day.weather[0].description}, 🌡️ ${day.temp.min}°C–${day.temp.max}°C, 💨 ${day.wind_speed} m/s</p>`;
+        }).join('');
+      document.getElementById("sunTimes").innerHTML = `<div class="section-title">🌅 Alba e Tramonto</div>
+        <p>Alba: ${new Date(data.current.sunrise * 1000).toLocaleTimeString('it-IT')}</p>
+        <p>Tramonto: ${new Date(data.current.sunset * 1000).toLocaleTimeString('it-IT')}</p>`;
+      if (data.alerts) {
+        document.getElementById("alerts").innerHTML = "<div class='section-title'>🚨 Allerta Meteo</div>" +
+          data.alerts.map(alert => `<p><strong>${alert.event}</strong>: ${alert.description}</p>`).join('');
+      }
+      const labels = data.hourly.slice(0, 24).map(h => new Date(h.dt * 1000).getHours());
+      const temps = data.hourly.slice(0, 24).map(h => h.temp);
+      if (chart) chart.destroy();
+      chart = new Chart(document.getElementById("weatherChart"), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Temperatura oraria (°C)',
+            data: temps,
+            borderColor: '#8b0000',
+            fill: false
+          }]
+        },
+        options: { responsive: true }
+      });
+    }
+    window.onload = refreshWeather;
+  </script>
+</body>
+</html>
