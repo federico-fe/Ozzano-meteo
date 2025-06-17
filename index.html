@@ -1,0 +1,78 @@
+
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Meteo Ozzano - WeatherAPI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: sans-serif; padding: 1rem; background: #f9f9f9; color: #222; }
+    h1 { color: darkred; }
+    input, button { padding: 0.5rem; font-size: 1rem; margin: 0.5rem 0; width: 100%; }
+    .card { background: #fff; padding: 1rem; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.1); margin-top: 1rem; }
+    #log { white-space: pre-wrap; color: darkblue; background: #eef; padding: 0.5rem; border-radius: 5px; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>📍 Meteo con WeatherAPI</h1>
+  <input type="text" id="cityInput" placeholder="Inserisci città..." />
+  <button onclick="loadWeather()">🔄 Carica Meteo</button>
+
+  <div id="output" class="card">⏳ Attendi...</div>
+  <div id="log"></div>
+
+  <script>
+    const apiKey = "beaa66ad8f5a46eebdd95947251706";
+
+    async function loadWeather() {
+      const city = document.getElementById("cityInput").value.trim();
+      const output = document.getElementById("output");
+      const log = document.getElementById("log");
+      output.textContent = "⏳ Caricamento...";
+      log.textContent = "";
+
+      if (!city) {
+        output.textContent = "⚠️ Inserisci una città.";
+        return;
+      }
+
+      try {
+        log.textContent += "🔍 Cerco meteo per: " + city + "\n";
+        const res = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${encodeURIComponent(city)}&days=3&aqi=no&alerts=yes`);
+        const data = await res.json();
+
+        if (data.error) {
+          output.textContent = "❌ Città non trovata o errore nella richiesta.";
+          log.textContent += "Errore: " + data.error.message;
+          return;
+        }
+
+        const cur = data.current;
+        const loc = data.location;
+        const forecast = data.forecast.forecastday;
+
+        output.innerHTML = `
+          <strong>${loc.name}, ${loc.region}</strong><br>
+          ☀️ ${cur.condition.text}<br>
+          🌡️ Temp: ${cur.temp_c} °C<br>
+          💧 Umidità: ${cur.humidity}%<br>
+          💨 Vento: ${cur.wind_kph} km/h<br>
+          🌅 Alba: ${forecast[0].astro.sunrise} | 🌇 Tramonto: ${forecast[0].astro.sunset}<br><br>
+          <u>Previsioni:</u><br>
+          ${forecast.map(day => `<b>${day.date}</b>: ${day.day.condition.text}, max ${day.day.maxtemp_c}°C, min ${day.day.mintemp_c}°C`).join('<br>')}
+        `;
+
+        if (data.alerts && data.alerts.alert && data.alerts.alert.length > 0) {
+          output.innerHTML += `<br><strong style="color:red;">⚠️ ALLERTA:</strong><br>${data.alerts.alert[0].headline}`;
+        }
+
+        log.textContent += "✅ Meteo caricato con successo.\n";
+
+      } catch (err) {
+        output.textContent = "❌ Errore nella richiesta.";
+        log.textContent += "Errore: " + err.message;
+      }
+    }
+  </script>
+</body>
+</html>
