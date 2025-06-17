@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Meteo Ozzano</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: sans-serif;
@@ -19,7 +20,7 @@
       }
     }
     h1 { text-align: center; color: #007bff; }
-    select, .section {
+    select, .section, button, input {
       width: 100%%;
       margin: 1rem 0;
       padding: 1rem;
@@ -31,12 +32,6 @@
     @media (prefers-color-scheme: dark) {
       .section { background: #1e1e1e; }
     }
-    iframe {
-      width: 100%%;
-      height: 400px;
-      border: none;
-      margin-top: 1rem;
-    }
     a.button {
       display: block;
       text-align: center;
@@ -47,35 +42,48 @@
       text-decoration: none;
       border-radius: 5px;
     }
+    #admin-panel {
+      display: none;
+      margin-top: 2rem;
+      padding: 1rem;
+      border: 2px dashed #007bff;
+    }
+    canvas {
+      max-width: 100%%;
+      margin: 1rem auto;
+      display: block;
+    }
   </style>
 </head>
 <body>
   <h1>📍 Meteo Live</h1>
-  <select id="citySelect">
-    <option value="Ozzano dell'Emilia">Ozzano dell'Emilia</option>
-    <option value="Bologna">Bologna</option>
-    <option value="Medicina">Medicina</option>
-    <option value="Misano Adriatico">Misano Adriatico</option>
-    <option value="Cesenatico">Cesenatico</option>
-  </select>
+  <select id="citySelect"></select>
+  <button onclick="refreshWeather()">🔄 Aggiorna ora</button>
 
   <div id="weather" class="section">Caricamento dati meteo...</div>
   <div id="forecast" class="section">Caricamento previsioni...</div>
+  <div class="section"><canvas id="weatherChart"></canvas></div>
 
   <div class="section">
     <h2>🌩️ Rischio Grandine</h2>
-    <p>Dati stimati da Meteoblue (link esterno):</p>
     <a class="button" href="https://www.meteoblue.com/it/tempo/outdoorsports/ozzano-dell-emilia_italia_3172891" target="_blank">🔗 Vai a Meteoblue</a>
   </div>
 
   <div class="section">
     <h2>🔔 Allerte Meteo ER</h2>
-    <iframe src="https://allertameteo.regione.emilia-romagna.it" title="Allerta Meteo Emilia-Romagna"></iframe>
+    <a class="button" href="https://allertameteo.regione.emilia-romagna.it" target="_blank">🌐 Vai al sito AllertaMeteo ER</a>
   </div>
 
   <div class="section">
-    <h2>🌀 Radar ARPAE</h2>
-    <a class="button" href="https://www.arpae.it/radar" target="_blank">📡 Apri radar in tempo reale</a>
+    <h2>🌀 Radar Pioggia ARPAE</h2>
+    <a class="button" href="https://www.arpae.it/sim/?id=radar_stimapioggia" target="_blank">📡 Vai al Radar</a>
+  </div>
+
+  <div id="admin-panel" class="section">
+    <h2>🔧 Pannello Admin</h2>
+    <p>Aggiungi una nuova città:</p>
+    <input type="text" id="newCity" placeholder="Es. Milano" />
+    <button onclick="addCity()">Aggiungi</button>
   </div>
 
   <script>
@@ -83,6 +91,56 @@
     const citySelect = document.getElementById("citySelect");
     const weatherDiv = document.getElementById("weather");
     const forecastDiv = document.getElementById("forecast");
+    const ctx = document.getElementById("weatherChart").getContext("2d");
+    const adminPanel = document.getElementById("admin-panel");
+
+    let chart;
+
+    const defaultCities = [
+      "Ozzano dell'Emilia",
+      "Bologna",
+      "Medicina",
+      "Misano Adriatico",
+      "Cesenatico"
+    ];
+
+    const loadCities = () => {
+      const saved = JSON.parse(localStorage.getItem("cities")) || defaultCities;
+      citySelect.innerHTML = "";
+      saved.forEach(city => {
+        const option = document.createElement("option");
+        option.text = city;
+        option.value = city;
+        citySelect.add(option);
+      });
+    };
+
+    const saveCity = (newCity) => {
+      let cities = JSON.parse(localStorage.getItem("cities")) || defaultCities;
+      if (!cities.includes(newCity)) {
+        cities.push(newCity);
+        localStorage.setItem("cities", JSON.stringify(cities));
+      }
+    };
+
+    function addCity() {
+      const newCity = document.getElementById("newCity").value.trim();
+      if (newCity) {
+        saveCity(newCity);
+        loadCities();
+        citySelect.value = newCity;
+        loadWeather(newCity);
+      }
+    }
+
+    function refreshWeather() {
+      loadWeather(citySelect.value);
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("admin") === "1") {
+      adminPanel.style.display = "block";
+    }
 
     const loadWeather = async (city) => {
       try {
@@ -104,22 +162,40 @@
         `;
 
         forecastDiv.innerHTML = "<h2>📅 Prossime ore</h2>";
-        for (let i = 0; i < 5; i++) {
+        const labels = [];
+        const temps = [];
+        const hums = [];
+
+        for (let i = 0; i < 8; i++) {
           const fc = fData.list[i];
-          forecastDiv.innerHTML += `
-            <p><strong>${fc.dt_txt.slice(11, 16)}</strong> - ${fc.weather[0].description}, 🌡️ ${fc.main.temp}°C</p>
-          `;
+          const time = fc.dt_txt.slice(11, 16);
+          labels.push(time);
+          temps.push(fc.main.temp);
+          hums.push(fc.main.humidity);
+          forecastDiv.innerHTML += `<p><strong>${time}</strong> - ${fc.weather[0].description}, 🌡️ ${fc.main.temp}°C</p>`;
         }
-      } catch (err) {
+
+        if (chart) chart.destroy();
+        chart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              { label: 'Temperatura (°C)', data: temps, borderColor: 'red', fill: false },
+              { label: 'Umidità (%)', data: hums, borderColor: 'blue', fill: false }
+            ]
+          },
+          options: { responsive: true, plugins: { legend: { position: 'top' } } }
+        });
+      } catch {
         weatherDiv.innerHTML = "Errore nel caricamento dati meteo.";
         forecastDiv.innerHTML = "";
       }
     };
 
-    citySelect.addEventListener("change", (e) => {
-      loadWeather(e.target.value);
-    });
+    citySelect.addEventListener("change", (e) => loadWeather(e.target.value));
 
+    loadCities();
     loadWeather(citySelect.value);
   </script>
 </body>
